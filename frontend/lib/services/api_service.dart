@@ -144,4 +144,18 @@ class ApiService {
     }
     throw Exception('Failed to update book');
   }
+
+  // ============ AI FEATURES ============
+
+  Future<List<String>> getAIRecommendations(String userInput) async {
+    String url = '$baseUrl/ai/books/recommend';
+    if (userInput.isNotEmpty) {
+      url += '?userInput=${Uri.encodeComponent(userInput)}';
+    }
+    final response = await http.get(Uri.parse(url));
+    if (response.statusCode == 200) {
+      return List<String>.from(json.decode(response.body));
+    }
+    throw Exception('Failed to get AI recommendations');
+  }
 }

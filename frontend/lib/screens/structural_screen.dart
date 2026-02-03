@@ -15,6 +15,9 @@ class _StructuralScreenState extends State<StructuralScreen> {
   List<String> _featuredBooks = [];
   List<String> _bestsellerBooks = [];
   bool _isLoading = false;
+  List<String> _aiRecommendations = [];
+  bool _isLoadingAI = false;
+  final _aiInputController = TextEditingController();
 
   // Add Book Form Controllers
   final _titleController = TextEditingController();
@@ -43,6 +46,7 @@ class _StructuralScreenState extends State<StructuralScreen> {
     _authorController.dispose();
     _priceController.dispose();
     _searchIdController.dispose();
+    _aiInputController.dispose();
     super.dispose();
   }
 
@@ -148,6 +152,23 @@ class _StructuralScreenState extends State<StructuralScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: $e')),
+      );
+    }
+  }
+
+  void _getAIRecommendations() async {
+    setState(() => _isLoadingAI = true);
+    try {
+      final recommendations = await _apiService.getAIRecommendations(_aiInputController.text);
+      setState(() {
+        _aiRecommendations = recommendations;
+        _isLoadingAI = false;
+      });
+    } catch (e) {
+      setState(() => _isLoadingAI = false);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error getting AI recommendations: $e')),
       );
     }
   }
@@ -275,6 +296,53 @@ class _StructuralScreenState extends State<StructuralScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // AI Recommendations Card
+          Card(
+            color: Colors.purple.shade50,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('AI Book Recommendations',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                  const Text('Get AI-powered book suggestions based on your library'),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _aiInputController,
+                    decoration: const InputDecoration(
+                      labelText: 'Your preferences (optional)',
+                      hintText: 'e.g., "I like sci-fi" or "beginner-friendly books"',
+                      border: OutlineInputBorder(),
+                    ),
+                    maxLines: 2,
+                  ),
+                  const SizedBox(height: 12),
+                  ElevatedButton(
+                    onPressed: _isLoadingAI ? null : _getAIRecommendations,
+                    child: _isLoadingAI
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Get AI Recommendations'),
+                  ),
+                  if (_aiRecommendations.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    const Divider(),
+                    const SizedBox(height: 8),
+                    ..._aiRecommendations.map((rec) => Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Text(rec, style: const TextStyle(fontSize: 14)),
+                    )),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
           // Add Book Form - Facade Pattern
           Card(
             color: Colors.green.shade50,
@@ -313,7 +381,7 @@ class _StructuralScreenState extends State<StructuralScreen> {
                   ),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
-                    initialValue: _selectedCategory,
+                    value: _selectedCategory,
                     decoration: const InputDecoration(
                       labelText: 'Category',
                       border: OutlineInputBorder(),
